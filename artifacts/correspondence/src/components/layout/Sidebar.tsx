@@ -1,25 +1,41 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, FileText, Inbox, Archive, BarChart3, Building2, Users } from "lucide-react";
+import { LayoutDashboard, FileText, Inbox, Archive, BarChart3, Building2, Users, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
-const navigation = [
-  { name: "الرئيسية", href: "/", icon: LayoutDashboard },
-  { name: "صندوق الوارد", href: "/inbox", icon: Inbox },
-  { name: "إضافة مراسلة", href: "/add", icon: FileText },
-  { name: "الأرشيف", href: "/archive", icon: Archive },
-  { name: "التقارير", href: "/reports", icon: BarChart3 },
-  { name: "الأقسام", href: "/departments", icon: Building2 },
-  { name: "الموظفون", href: "/employees", icon: Users },
+const allNavigation = [
+  { name: "الرئيسية", href: "/", icon: LayoutDashboard, roles: ["admin", "supervisor", "employee"] },
+  { name: "صندوق الوارد", href: "/inbox", icon: Inbox, roles: ["admin", "supervisor", "employee"] },
+  { name: "إضافة مراسلة", href: "/add", icon: FileText, roles: ["admin", "supervisor", "employee"] },
+  { name: "الأرشيف", href: "/archive", icon: Archive, roles: ["admin", "supervisor"] },
+  { name: "التقارير", href: "/reports", icon: BarChart3, roles: ["admin", "supervisor"] },
+  { name: "الأقسام", href: "/departments", icon: Building2, roles: ["admin"] },
+  { name: "الموظفون", href: "/employees", icon: Users, roles: ["admin"] },
 ];
+
+const roleLabels: Record<string, string> = {
+  admin: "مدير",
+  supervisor: "مشرف",
+  employee: "موظف",
+};
 
 export function Sidebar() {
   const [location] = useLocation();
+  const { user, signOut } = useAuth();
+
+  const navigation = allNavigation.filter(
+    (item) => !user || item.roles.includes(user.role)
+  );
 
   return (
     <div className="flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground border-l border-sidebar-border">
+      {/* Brand */}
       <div className="flex h-16 items-center px-6 py-4 border-b border-sidebar-border">
         <h1 className="text-xl font-bold tracking-tight text-sidebar-primary">معهد دلتا العالي</h1>
       </div>
+
+      {/* Nav */}
       <div className="flex-1 overflow-y-auto py-4">
         <nav className="space-y-1 px-3">
           {navigation.map((item) => {
@@ -27,6 +43,7 @@ export function Sidebar() {
             return (
               <Link key={item.name} href={item.href}>
                 <div
+                  data-testid={`nav-${item.href.replace("/", "") || "home"}`}
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
                     isActive
@@ -42,6 +59,31 @@ export function Sidebar() {
           })}
         </nav>
       </div>
+
+      {/* User profile footer */}
+      {user && (
+        <div className="border-t border-sidebar-border p-3">
+          <div className="flex items-center gap-3 rounded-md px-3 py-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-accent-foreground font-semibold text-sm shrink-0">
+              {user.name.charAt(0)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold truncate">{user.name}</p>
+              <p className="text-xs text-sidebar-foreground/60 truncate">{roleLabels[user.role] ?? user.role}</p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full mt-1 justify-start gap-2 text-xs text-sidebar-foreground/70 hover:text-destructive hover:bg-destructive/10"
+            onClick={signOut}
+            data-testid="button-signout"
+          >
+            <LogOut className="h-4 w-4" />
+            تسجيل الخروج
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
