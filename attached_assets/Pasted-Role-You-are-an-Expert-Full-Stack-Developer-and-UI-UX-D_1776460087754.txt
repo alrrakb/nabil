@@ -1,0 +1,36 @@
+Role: You are an Expert Full-Stack Developer and UI/UX Designer.
+
+[Project Context]
+
+Project: 'Internal Correspondence Management System' (نظام إدارة المراسلات الداخلية) for Delta Higher Institute.
+
+Goal: A digital dashboard system to track documents from creation to archiving, replacing a paper-based workflow.
+
+Roles: Admin, Supervisor, Employee.
+
+Tech Stack: React.js (Vite), Tailwind CSS, Lucide-React for icons, and Supabase (PostgreSQL) for the database.
+
+Supabase Project: Connected to a project named nabildelta.
+
+CRITICAL UI RULES: The entire User Interface MUST be in Arabic. The application MUST use a Right-to-Left (RTL) layout (dir="rtl"). The primary font should be an Arabic font like 'Cairo' or 'Tajawal'.
+
+[Current Task: Foundation & Dashboard Layout]
+I want you to execute the first phase of this project. Please do the following step-by-step:
+
+Project Setup: Initialize a React project using Vite. Install tailwindcss, react-router-dom, lucide-react, and @supabase/supabase-js.
+
+Global Configuration: Update index.html to include lang="ar" and dir="rtl". Configure tailwind.config.js to include the 'Cairo' font and ensure the setup supports Arabic perfectly.
+
+Supabase Client: Create a src/lib/supabase.js file to initialize the Supabase client using environment variables (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY). Provide instructions on how I should set up the .env file.
+
+Database Schema (SQL): Generate a .sql file or a clear SQL block containing the table definitions and Row Level Security (RLS) policies for: departments, employees, correspondences, correspondence_history, and archive. I will copy and run this in my Supabase SQL Editor manually.
+
+Dashboard Layout: Create a professional, enterprise-grade DashboardLayout component. It should include:
+
+A responsive Sidebar (شريط جانبي) with navigation links: الرئيسية (Home), إضافة مراسلة (Add Correspondence), صندوق الوارد (Inbox), الأرشيف (Archive), التقارير (Reports).
+
+A Top Header (رأس الصفحة) showing a placeholder user profile and a notification bell.
+
+Set up the basic React Router in App.jsx to render this layout.
+
+Note: Execute these steps fully. All UI text, buttons, and placeholders must be in Arabic.
