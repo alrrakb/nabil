@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "نظام إدارة المراسلات الداخلية"
+version = "1.0.0"
+id = "artifacts/correspondence"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22706
+
+[services.development]
+run = "pnpm --filter @workspace/correspondence run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/correspondence", "run", "build" ]
+publicDir = "artifacts/correspondence/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22706"
+BASE_PATH = "/"

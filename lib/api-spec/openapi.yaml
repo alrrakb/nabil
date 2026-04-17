@@ -3,20 +3,29 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: API specification for Delta Higher Institute Correspondence System
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: departments
+    description: Department operations
+  - name: employees
+    description: Employee operations
+  - name: correspondences
+    description: Correspondence operations
+  - name: archive
+    description: Archive operations
+  - name: dashboard
+    description: Dashboard summary operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +33,450 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /departments:
+    get:
+      operationId: listDepartments
+      tags: [departments]
+      summary: List all departments
+      responses:
+        "200":
+          description: List of departments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Department"
+    post:
+      operationId: createDepartment
+      tags: [departments]
+      summary: Create a department
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDepartmentBody"
+      responses:
+        "201":
+          description: Created department
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+
+  /departments/{id}:
+    get:
+      operationId: getDepartment
+      tags: [departments]
+      summary: Get a department by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Department
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+    put:
+      operationId: updateDepartment
+      tags: [departments]
+      summary: Update a department
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDepartmentBody"
+      responses:
+        "200":
+          description: Updated department
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+    delete:
+      operationId: deleteDepartment
+      tags: [departments]
+      summary: Delete a department
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  /employees:
+    get:
+      operationId: listEmployees
+      tags: [employees]
+      summary: List all employees
+      parameters:
+        - name: departmentId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of employees
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Employee"
+    post:
+      operationId: createEmployee
+      tags: [employees]
+      summary: Create an employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEmployeeBody"
+      responses:
+        "201":
+          description: Created employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+
+  /employees/{id}:
+    get:
+      operationId: getEmployee
+      tags: [employees]
+      summary: Get employee by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+    put:
+      operationId: updateEmployee
+      tags: [employees]
+      summary: Update employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEmployeeBody"
+      responses:
+        "200":
+          description: Updated employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+    delete:
+      operationId: deleteEmployee
+      tags: [employees]
+      summary: Delete employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  /correspondences:
+    get:
+      operationId: listCorrespondences
+      tags: [correspondences]
+      summary: List correspondences
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, in_progress, completed, rejected, archived]
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [incoming, outgoing, internal]
+        - name: departmentId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: assignedTo
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of correspondences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Correspondence"
+    post:
+      operationId: createCorrespondence
+      tags: [correspondences]
+      summary: Create a new correspondence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCorrespondenceBody"
+      responses:
+        "201":
+          description: Created correspondence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Correspondence"
+
+  /correspondences/{id}:
+    get:
+      operationId: getCorrespondence
+      tags: [correspondences]
+      summary: Get correspondence by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Correspondence with history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CorrespondenceDetail"
+    put:
+      operationId: updateCorrespondence
+      tags: [correspondences]
+      summary: Update correspondence
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCorrespondenceBody"
+      responses:
+        "200":
+          description: Updated correspondence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Correspondence"
+    delete:
+      operationId: deleteCorrespondence
+      tags: [correspondences]
+      summary: Delete correspondence
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  /correspondences/{id}/archive:
+    post:
+      operationId: archiveCorrespondence
+      tags: [correspondences]
+      summary: Archive a correspondence
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArchiveCorrespondenceBody"
+      responses:
+        "200":
+          description: Archived
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Archive"
+
+  /correspondences/{id}/history:
+    post:
+      operationId: addCorrespondenceHistory
+      tags: [correspondences]
+      summary: Add a history entry to a correspondence
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateHistoryBody"
+      responses:
+        "201":
+          description: History entry added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CorrespondenceHistory"
+
+  /archive:
+    get:
+      operationId: listArchive
+      tags: [archive]
+      summary: List archived correspondences
+      parameters:
+        - name: departmentId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: year
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Archive list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Archive"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Summary stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/recent:
+    get:
+      operationId: getRecentCorrespondences
+      tags: [dashboard]
+      summary: Get recent correspondence activity
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Recent correspondences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Correspondence"
+
+  /dashboard/by-department:
+    get:
+      operationId: getCorrespondencesByDepartment
+      tags: [dashboard]
+      summary: Get correspondence counts grouped by department
+      responses:
+        "200":
+          description: Department counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DepartmentCount"
+
+  /dashboard/by-status:
+    get:
+      operationId: getCorrespondencesByStatus
+      tags: [dashboard]
+      summary: Get correspondence counts grouped by status
+      responses:
+        "200":
+          description: Status counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StatusCount"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +487,361 @@ components:
       required:
         - status
 
+    DeleteResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        id:
+          type: integer
+      required:
+        - success
+        - id
+
+    Department:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - createdAt
+
+    CreateDepartmentBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+      required:
+        - name
+
+    Employee:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, supervisor, employee]
+        departmentId:
+          type: integer
+          nullable: true
+        departmentName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+        - role
+        - createdAt
+
+    CreateEmployeeBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, supervisor, employee]
+        departmentId:
+          type: integer
+          nullable: true
+      required:
+        - name
+        - email
+        - role
+
+    Correspondence:
+      type: object
+      properties:
+        id:
+          type: integer
+        referenceNumber:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [incoming, outgoing, internal]
+        status:
+          type: string
+          enum: [pending, in_progress, completed, rejected, archived]
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        fromDepartmentId:
+          type: integer
+          nullable: true
+        fromDepartmentName:
+          type: string
+          nullable: true
+        toDepartmentId:
+          type: integer
+          nullable: true
+        toDepartmentName:
+          type: string
+          nullable: true
+        assignedToId:
+          type: integer
+          nullable: true
+        assignedToName:
+          type: string
+          nullable: true
+        createdById:
+          type: integer
+          nullable: true
+        createdByName:
+          type: string
+          nullable: true
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - referenceNumber
+        - subject
+        - type
+        - status
+        - priority
+        - createdAt
+        - updatedAt
+
+    CorrespondenceDetail:
+      allOf:
+        - $ref: "#/components/schemas/Correspondence"
+        - type: object
+          properties:
+            history:
+              type: array
+              items:
+                $ref: "#/components/schemas/CorrespondenceHistory"
+
+    CreateCorrespondenceBody:
+      type: object
+      properties:
+        subject:
+          type: string
+        body:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [incoming, outgoing, internal]
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        fromDepartmentId:
+          type: integer
+          nullable: true
+        toDepartmentId:
+          type: integer
+          nullable: true
+        assignedToId:
+          type: integer
+          nullable: true
+        createdById:
+          type: integer
+          nullable: true
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - subject
+        - type
+        - priority
+
+    UpdateCorrespondenceBody:
+      type: object
+      properties:
+        subject:
+          type: string
+        body:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, in_progress, completed, rejected, archived]
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        assignedToId:
+          type: integer
+          nullable: true
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+
+    CorrespondenceHistory:
+      type: object
+      properties:
+        id:
+          type: integer
+        correspondenceId:
+          type: integer
+        action:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        performedById:
+          type: integer
+          nullable: true
+        performedByName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - correspondenceId
+        - action
+        - createdAt
+
+    CreateHistoryBody:
+      type: object
+      properties:
+        action:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        performedById:
+          type: integer
+          nullable: true
+      required:
+        - action
+
+    Archive:
+      type: object
+      properties:
+        id:
+          type: integer
+        correspondenceId:
+          type: integer
+        archiveNumber:
+          type: string
+        archiveLocation:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        archivedById:
+          type: integer
+          nullable: true
+        archivedByName:
+          type: string
+          nullable: true
+        archivedAt:
+          type: string
+          format: date-time
+        correspondence:
+          $ref: "#/components/schemas/Correspondence"
+      required:
+        - id
+        - correspondenceId
+        - archiveNumber
+        - archivedAt
+        - correspondence
+
+    ArchiveCorrespondenceBody:
+      type: object
+      properties:
+        archiveLocation:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        archivedById:
+          type: integer
+          nullable: true
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalCorrespondences:
+          type: integer
+        pendingCount:
+          type: integer
+        inProgressCount:
+          type: integer
+        completedCount:
+          type: integer
+        archivedCount:
+          type: integer
+        urgentCount:
+          type: integer
+        totalDepartments:
+          type: integer
+        totalEmployees:
+          type: integer
+      required:
+        - totalCorrespondences
+        - pendingCount
+        - inProgressCount
+        - completedCount
+        - archivedCount
+        - urgentCount
+        - totalDepartments
+        - totalEmployees
+
+    DepartmentCount:
+      type: object
+      properties:
+        departmentId:
+          type: integer
+        departmentName:
+          type: string
+        count:
+          type: integer
+      required:
+        - departmentId
+        - departmentName
+        - count
+
+    StatusCount:
+      type: object
+      properties:
+        status:
+          type: string
+        count:
+          type: integer
+      required:
+        - status
+        - count
