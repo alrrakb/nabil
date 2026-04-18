@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,13 +7,17 @@ import { CreateCorrespondenceBodyType, CreateCorrespondenceBodyPriority } from "
 import { typeTranslations, priorityTranslations } from "@/lib/translations";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { supabase } from "@/lib/supabase";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Paperclip, X, FileText, Loader2, Upload } from "lucide-react";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const formSchema = z.object({
   subject: z.string().min(3, "الموضوع مطلوب ويجب أن يكون 3 أحرف على الأقل"),
@@ -27,12 +32,22 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} بايت`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} كيلوبايت`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} ميغابايت`;
+}
+
 export default function AddCorrespondence() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const createCorrespondence = useCreateCorrespondence();
   const { data: departments } = useListDepartments();
   const { data: employees } = useListEmployees();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -44,7 +59,43 @@ export default function AddCorrespondence() {
     },
   });
 
-  function onSubmit(values: FormValues) {
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    const validFiles = files.filter((f) => {
+      if (f.size > MAX_FILE_SIZE) {
+        toast({ title: `الملف "${f.name}" يتجاوز الحد الأقصى (10 ميغابايت)`, variant: "destructive" });
+        return false;
+      }
+      return true;
+    });
+    setAttachedFiles((prev) => [...prev, ...validFiles]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function removeFile(index: number) {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function uploadFiles(correspondenceId: number): Promise<string[]> {
+    const urls: string[] = [];
+    for (const file of attachedFiles) {
+      const filePath = `${correspondenceId}/${Date.now()}-${file.name}`;
+      const { error } = await supabase.storage.from("attachments").upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+      if (error) {
+        toast({ title: `فشل رفع الملف: ${error.message}`, variant: "destructive" });
+      } else {
+        const { data: urlData } = supabase.storage.from("attachments").getPublicUrl(filePath);
+        if (urlData) urls.push(urlData.publicUrl);
+      }
+    }
+    return urls;
+  }
+
+  async function onSubmit(values: FormValues) {
+    setUploadingFiles(attachedFiles.length > 0);
     createCorrespondence.mutate(
       {
         data: {
@@ -55,16 +106,23 @@ export default function AddCorrespondence() {
         },
       },
       {
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
+          if (attachedFiles.length > 0) {
+            await uploadFiles(data.id);
+          }
+          setUploadingFiles(false);
           toast({ title: "تم إضافة المراسلة بنجاح" });
           setLocation(`/correspondences/${data.id}`);
         },
         onError: () => {
+          setUploadingFiles(false);
           toast({ title: "حدث خطأ أثناء إضافة المراسلة", variant: "destructive" });
         },
       }
     );
   }
+
+  const isSubmitting = createCorrespondence.isPending || uploadingFiles;
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -74,13 +132,13 @@ export default function AddCorrespondence() {
         <CardContent className="pt-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              
+
               <FormField
                 control={form.control}
                 name="subject"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>الموضوع</FormLabel>
+                    <FormLabel>الموضوع <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
                       <Input placeholder="أدخل موضوع المراسلة..." {...field} />
                     </FormControl>
@@ -98,9 +156,7 @@ export default function AddCorrespondence() {
                       <FormLabel>النوع</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="اختر النوع" />
-                          </SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="اختر النوع" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {Object.entries(CreateCorrespondenceBodyType).map(([key, value]) => (
@@ -121,9 +177,7 @@ export default function AddCorrespondence() {
                       <FormLabel>الأولوية</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="اختر الأولوية" />
-                          </SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="اختر الأولوية" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {Object.entries(CreateCorrespondenceBodyPriority).map(([key, value]) => (
@@ -146,9 +200,7 @@ export default function AddCorrespondence() {
                       <FormLabel>الجهة المرسلة</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="اختر القسم" />
-                          </SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="اختر القسم" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {departments?.map((dept) => (
@@ -169,9 +221,7 @@ export default function AddCorrespondence() {
                       <FormLabel>الجهة المستقبلة</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="اختر القسم" />
-                          </SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="اختر القسم" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {departments?.map((dept) => (
@@ -191,12 +241,10 @@ export default function AddCorrespondence() {
                   name="assignedToId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>تعيين إلى (موظف)</FormLabel>
+                      <FormLabel>المستلم (اختياري)</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="اختر الموظف" />
-                          </SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="اختر الموظف" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {employees?.map((emp) => (
@@ -229,7 +277,7 @@ export default function AddCorrespondence() {
                 name="body"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>التفاصيل (اختياري)</FormLabel>
+                    <FormLabel>التفاصيل <span className="text-muted-foreground text-xs">(اختياري)</span></FormLabel>
                     <FormControl>
                       <Textarea placeholder="أدخل تفاصيل المراسلة..." className="min-h-[120px]" {...field} />
                     </FormControl>
@@ -238,9 +286,69 @@ export default function AddCorrespondence() {
                 )}
               />
 
+              {/* File attachment section — Bug 1 fix */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">المرفقات <span className="text-muted-foreground text-xs">(اختياري)</span></span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Paperclip className="h-4 w-4" />
+                    إضافة ملف
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileChange}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                  />
+                </div>
+
+                {attachedFiles.length > 0 && (
+                  <div className="rounded-lg border bg-muted/30 divide-y">
+                    {attachedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="truncate">{file.name}</span>
+                          <span className="text-muted-foreground shrink-0">{formatBytes(file.size)}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => removeFile(index)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {attachedFiles.length === 0 && (
+                  <div
+                    className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 py-6 cursor-pointer hover:border-primary/40 transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                    <p className="text-sm text-muted-foreground">اسحب الملفات هنا أو انقر للاختيار</p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">PDF, Word, Excel, صور — حتى 10 ميغابايت لكل ملف</p>
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-end">
-                <Button type="submit" disabled={createCorrespondence.isPending}>
-                  {createCorrespondence.isPending ? "جاري الإضافة..." : "حفظ المراسلة"}
+                <Button type="submit" disabled={isSubmitting} className="gap-2">
+                  {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {uploadingFiles ? "جاري رفع الملفات..." : isSubmitting ? "جاري الحفظ..." : "حفظ المراسلة"}
                 </Button>
               </div>
             </form>
