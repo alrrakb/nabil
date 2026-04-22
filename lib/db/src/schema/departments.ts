@@ -1,12 +1,13 @@
-import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const departmentsTable = pgTable("departments", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
-  description: text("description"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  code: text("code").unique(),
+  color: text("color"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
 export const insertDepartmentSchema = createInsertSchema(departmentsTable).omit({ id: true, createdAt: true });

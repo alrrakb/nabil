@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { session, user, loading } = useAuth();
+  const { session, user, loading, profileLoading, signOut } = useAuth();
 
   if (loading) {
     return (
@@ -22,8 +22,37 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     );
   }
 
-  if (!session || !user) {
+  if (!session) {
     return <Redirect to="/login" />;
+  }
+
+  // A background token-refresh triggered a profile re-fetch — show spinner
+  // instead of the error wall so a transient delay never kicks the user out.
+  if (!user && profileLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">جاري التحقق من الصلاحيات...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4 text-center p-8">
+          <p className="text-destructive font-semibold">هذا الحساب غير مسجل في النظام.</p>
+          <button
+            onClick={() => signOut()}
+            className="text-sm underline text-muted-foreground hover:text-foreground"
+          >
+            تسجيل الخروج
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {

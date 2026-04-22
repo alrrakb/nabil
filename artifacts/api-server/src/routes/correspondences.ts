@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, and, sql } from "drizzle-orm";
-import { db, correspondencesTable, departmentsTable, employeesTable, correspondenceHistoryTable, archiveTable } from "@workspace/db";
+import { eq, and, or } from "drizzle-orm";
+import { db, correspondencesTable, departmentsTable, employeesTable, correspondenceHistoryTable, archiveTable, notificationsTable } from "@workspace/db";
 import {
   CreateCorrespondenceBody,
   GetCorrespondenceParams,
@@ -12,27 +12,26 @@ import {
   ArchiveCorrespondenceBody,
   AddCorrespondenceHistoryParams,
   AddCorrespondenceHistoryBody,
+  CorrespondenceActionBody,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-const fromDept = departmentsTable;
-const toDeptAlias = db.$with("to_dept").as(
-  db.select().from(departmentsTable)
-);
-
 function generateRefNumber(): string {
   const now = new Date();
-  const year = now.getFullYear();
   const rand = Math.floor(Math.random() * 9000) + 1000;
-  return `CORR-${year}-${rand}`;
+  return `CORR-${now.getFullYear()}-${rand}`;
 }
 
-async function getCorrespondenceById(id: number) {
-  const fromDepts = db.select({ id: departmentsTable.id, name: departmentsTable.name }).from(departmentsTable).as("from_dept");
-  const toDepts = db.select({ id: departmentsTable.id, name: departmentsTable.name }).from(departmentsTable).as("to_dept");
-  const assignees = db.select({ id: employeesTable.id, name: employeesTable.name }).from(employeesTable).as("assignee");
-  const creators = db.select({ id: employeesTable.id, name: employeesTable.name }).from(employeesTable).as("creator");
+function corrSelect() {
+  const senders = db.select({ id: employeesTable.id, fullName: employeesTable.fullName }).from(employeesTable).as("sender");
+  const receivers = db.select({ id: employeesTable.id, fullName: employeesTable.fullName }).from(employeesTable).as("receiver");
+  return { senders, receivers };
+}
+
+async function getCorrespondenceById(id: string) {
+  const senders = db.select({ id: employeesTable.id, fullName: employeesTable.fullName, employeeCode: employeesTable.employeeCode }).from(employeesTable).as("sender");
+  const receivers = db.select({ id: employeesTable.id, fullName: employeesTable.fullName, employeeCode: employeesTable.employeeCode }).from(employeesTable).as("receiver");
 
   const [row] = await db
     .select({
@@ -40,26 +39,25 @@ async function getCorrespondenceById(id: number) {
       referenceNumber: correspondencesTable.referenceNumber,
       subject: correspondencesTable.subject,
       body: correspondencesTable.body,
-      type: correspondencesTable.type,
       status: correspondencesTable.status,
       priority: correspondencesTable.priority,
-      fromDepartmentId: correspondencesTable.fromDepartmentId,
-      fromDepartmentName: fromDepts.name,
-      toDepartmentId: correspondencesTable.toDepartmentId,
-      toDepartmentName: toDepts.name,
-      assignedToId: correspondencesTable.assignedToId,
-      assignedToName: assignees.name,
-      createdById: correspondencesTable.createdById,
-      createdByName: creators.name,
-      dueDate: correspondencesTable.dueDate,
+      type: correspondencesTable.type,
+      senderId: correspondencesTable.senderId,
+      senderName: senders.fullName,
+      senderCode: senders.employeeCode,
+      receiverId: correspondencesTable.receiverId,
+      receiverName: receivers.fullName,
+      receiverCode: receivers.employeeCode,
+      departmentId: correspondencesTable.departmentId,
+      departmentName: departmentsTable.name,
+      attachmentUrl: correspondencesTable.attachmentUrl,
       createdAt: correspondencesTable.createdAt,
       updatedAt: correspondencesTable.updatedAt,
     })
     .from(correspondencesTable)
-    .leftJoin(fromDepts, eq(correspondencesTable.fromDepartmentId, fromDepts.id))
-    .leftJoin(toDepts, eq(correspondencesTable.toDepartmentId, toDepts.id))
-    .leftJoin(assignees, eq(correspondencesTable.assignedToId, assignees.id))
-    .leftJoin(creators, eq(correspondencesTable.createdById, creators.id))
+    .leftJoin(senders, eq(correspondencesTable.senderId, senders.id))
+    .leftJoin(receivers, eq(correspondencesTable.receiverId, receivers.id))
+    .leftJoin(departmentsTable, eq(correspondencesTable.departmentId, departmentsTable.id))
     .where(eq(correspondencesTable.id, id));
 
   return row;
@@ -72,16 +70,22 @@ router.get("/correspondences", async (req, res): Promise<void> => {
     return;
   }
 
-  const fromDepts = db.select({ id: departmentsTable.id, name: departmentsTable.name }).from(departmentsTable).as("from_dept");
-  const toDepts = db.select({ id: departmentsTable.id, name: departmentsTable.name }).from(departmentsTable).as("to_dept");
-  const assignees = db.select({ id: employeesTable.id, name: employeesTable.name }).from(employeesTable).as("assignee");
-  const creators = db.select({ id: employeesTable.id, name: employeesTable.name }).from(employeesTable).as("creator");
+  const senders = db.select({ id: employeesTable.id, fullName: employeesTable.fullName, employeeCode: employeesTable.employeeCode }).from(employeesTable).as("sender");
+  const receivers = db.select({ id: employeesTable.id, fullName: employeesTable.fullName, employeeCode: employeesTable.employeeCode }).from(employeesTable).as("receiver");
 
   const conditions = [];
   if (query.data.status) conditions.push(eq(correspondencesTable.status, query.data.status));
   if (query.data.type) conditions.push(eq(correspondencesTable.type, query.data.type));
-  if (query.data.departmentId) conditions.push(eq(correspondencesTable.toDepartmentId, query.data.departmentId));
-  if (query.data.assignedTo) conditions.push(eq(correspondencesTable.assignedToId, query.data.assignedTo));
+  if (query.data.departmentId) conditions.push(eq(correspondencesTable.departmentId, query.data.departmentId));
+  if (query.data.senderId) conditions.push(eq(correspondencesTable.senderId, query.data.senderId));
+  if (query.data.viewerRole === "employee" && query.data.viewerId) {
+    conditions.push(
+      or(
+        eq(correspondencesTable.senderId, query.data.viewerId),
+        eq(correspondencesTable.receiverId, query.data.viewerId),
+      )!
+    );
+  }
 
   const rows = await db
     .select({
@@ -89,26 +93,25 @@ router.get("/correspondences", async (req, res): Promise<void> => {
       referenceNumber: correspondencesTable.referenceNumber,
       subject: correspondencesTable.subject,
       body: correspondencesTable.body,
-      type: correspondencesTable.type,
       status: correspondencesTable.status,
       priority: correspondencesTable.priority,
-      fromDepartmentId: correspondencesTable.fromDepartmentId,
-      fromDepartmentName: fromDepts.name,
-      toDepartmentId: correspondencesTable.toDepartmentId,
-      toDepartmentName: toDepts.name,
-      assignedToId: correspondencesTable.assignedToId,
-      assignedToName: assignees.name,
-      createdById: correspondencesTable.createdById,
-      createdByName: creators.name,
-      dueDate: correspondencesTable.dueDate,
+      type: correspondencesTable.type,
+      senderId: correspondencesTable.senderId,
+      senderName: senders.fullName,
+      senderCode: senders.employeeCode,
+      receiverId: correspondencesTable.receiverId,
+      receiverName: receivers.fullName,
+      receiverCode: receivers.employeeCode,
+      departmentId: correspondencesTable.departmentId,
+      departmentName: departmentsTable.name,
+      attachmentUrl: correspondencesTable.attachmentUrl,
       createdAt: correspondencesTable.createdAt,
       updatedAt: correspondencesTable.updatedAt,
     })
     .from(correspondencesTable)
-    .leftJoin(fromDepts, eq(correspondencesTable.fromDepartmentId, fromDepts.id))
-    .leftJoin(toDepts, eq(correspondencesTable.toDepartmentId, toDepts.id))
-    .leftJoin(assignees, eq(correspondencesTable.assignedToId, assignees.id))
-    .leftJoin(creators, eq(correspondencesTable.createdById, creators.id))
+    .leftJoin(senders, eq(correspondencesTable.senderId, senders.id))
+    .leftJoin(receivers, eq(correspondencesTable.receiverId, receivers.id))
+    .leftJoin(departmentsTable, eq(correspondencesTable.departmentId, departmentsTable.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(correspondencesTable.createdAt);
 
@@ -132,7 +135,7 @@ router.post("/correspondences", async (req, res): Promise<void> => {
     correspondenceId: corr.id,
     action: "تم إنشاء المراسلة",
     notes: `تم إنشاء المراسلة برقم المرجع ${referenceNumber}`,
-    performedById: parsed.data.createdById ?? null,
+    actorId: parsed.data.senderId ?? null,
   });
 
   const result = await getCorrespondenceById(corr.id);
@@ -152,18 +155,20 @@ router.get("/correspondences/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  const actors = db.select({ id: employeesTable.id, fullName: employeesTable.fullName }).from(employeesTable).as("actor");
+
   const history = await db
     .select({
       id: correspondenceHistoryTable.id,
       correspondenceId: correspondenceHistoryTable.correspondenceId,
       action: correspondenceHistoryTable.action,
       notes: correspondenceHistoryTable.notes,
-      performedById: correspondenceHistoryTable.performedById,
-      performedByName: employeesTable.name,
+      actorId: correspondenceHistoryTable.actorId,
+      actorName: actors.fullName,
       createdAt: correspondenceHistoryTable.createdAt,
     })
     .from(correspondenceHistoryTable)
-    .leftJoin(employeesTable, eq(correspondenceHistoryTable.performedById, employeesTable.id))
+    .leftJoin(actors, eq(correspondenceHistoryTable.actorId, actors.id))
     .where(eq(correspondenceHistoryTable.correspondenceId, params.data.id))
     .orderBy(correspondenceHistoryTable.createdAt);
 
@@ -195,7 +200,7 @@ router.put("/correspondences/:id", async (req, res): Promise<void> => {
       correspondenceId: params.data.id,
       action: `تم تغيير الحالة إلى "${parsed.data.status}"`,
       notes: null,
-      performedById: null,
+      actorId: null,
     });
   }
 
@@ -235,28 +240,92 @@ router.post("/correspondences/:id/archive", async (req, res): Promise<void> => {
     return;
   }
 
-  const now = new Date();
-  const archiveNumber = `ARCH-${now.getFullYear()}-${Math.floor(Math.random() * 9000) + 1000}`;
-
   await db.update(correspondencesTable).set({ status: "archived" }).where(eq(correspondencesTable.id, params.data.id));
 
   const [archive] = await db.insert(archiveTable).values({
     correspondenceId: params.data.id,
-    archiveNumber,
-    archiveLocation: parsed.data.archiveLocation ?? null,
-    notes: parsed.data.notes ?? null,
-    archivedById: parsed.data.archivedById ?? null,
+    archivedBy: parsed.data.archivedBy ?? null,
+    archiveReason: parsed.data.archiveReason ?? null,
   }).returning();
 
   await db.insert(correspondenceHistoryTable).values({
     correspondenceId: params.data.id,
     action: "تم أرشفة المراسلة",
-    notes: `رقم الأرشيف: ${archiveNumber}`,
-    performedById: parsed.data.archivedById ?? null,
+    notes: parsed.data.archiveReason ?? null,
+    actorId: parsed.data.archivedBy ?? null,
   });
 
   const updatedCorr = await getCorrespondenceById(params.data.id);
   res.json({ ...archive, correspondence: updatedCorr });
+});
+
+const ACTION_LABELS: Record<string, string> = {
+  approved: "تمت الموافقة على المراسلة",
+  rejected: "تم رفض المراسلة",
+  archived: "تم أرشفة المراسلة",
+};
+
+router.patch("/correspondences/:id/action", async (req, res): Promise<void> => {
+  const params = GetCorrespondenceParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const parsed = CorrespondenceActionBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const corr = await getCorrespondenceById(params.data.id);
+  if (!corr) {
+    res.status(404).json({ error: "Correspondence not found" });
+    return;
+  }
+
+  const { action, notes, actorId, actorRole } = parsed.data;
+
+  if (actorRole !== "admin" && corr.receiverId !== actorId) {
+    res.status(403).json({ error: "غير مصرح بتنفيذ هذا الإجراء" });
+    return;
+  }
+
+  await db.update(correspondencesTable)
+    .set({ status: action })
+    .where(eq(correspondencesTable.id, params.data.id));
+
+  await db.insert(correspondenceHistoryTable).values({
+    correspondenceId: params.data.id,
+    action: ACTION_LABELS[action] ?? action,
+    notes: notes ?? null,
+    actorId: actorId ?? null,
+  });
+
+  if (action === "archived") {
+    await db.insert(archiveTable).values({
+      correspondenceId: params.data.id,
+      archivedBy: actorId ?? null,
+      archiveReason: notes ?? "الأرشيف الرئيسي",
+    });
+  }
+
+  // Auto-notify the other party
+  const notifyTargetId = actorId === corr.senderId ? corr.receiverId : corr.senderId;
+  if (notifyTargetId) {
+    const ACTION_NOTIFY_LABELS: Record<string, string> = {
+      approved: "تمت الموافقة",
+      rejected: "تم الرفض",
+      archived: "تم الأرشفة",
+    };
+    await db.insert(notificationsTable).values({
+      userId: notifyTargetId,
+      title: ACTION_NOTIFY_LABELS[action] ?? action,
+      message: `المراسلة "${corr.subject}" (${corr.referenceNumber}): ${ACTION_NOTIFY_LABELS[action] ?? action}`,
+    });
+  }
+
+  const result = await getCorrespondenceById(params.data.id);
+  res.json(result);
 });
 
 router.post("/correspondences/:id/history", async (req, res): Promise<void> => {
@@ -275,8 +344,10 @@ router.post("/correspondences/:id/history", async (req, res): Promise<void> => {
     correspondenceId: params.data.id,
     action: parsed.data.action,
     notes: parsed.data.notes ?? null,
-    performedById: parsed.data.performedById ?? null,
+    actorId: parsed.data.actorId ?? null,
   }).returning();
+
+  const actors = db.select({ id: employeesTable.id, fullName: employeesTable.fullName }).from(employeesTable).as("actor");
 
   const [result] = await db
     .select({
@@ -284,12 +355,12 @@ router.post("/correspondences/:id/history", async (req, res): Promise<void> => {
       correspondenceId: correspondenceHistoryTable.correspondenceId,
       action: correspondenceHistoryTable.action,
       notes: correspondenceHistoryTable.notes,
-      performedById: correspondenceHistoryTable.performedById,
-      performedByName: employeesTable.name,
+      actorId: correspondenceHistoryTable.actorId,
+      actorName: actors.fullName,
       createdAt: correspondenceHistoryTable.createdAt,
     })
     .from(correspondenceHistoryTable)
-    .leftJoin(employeesTable, eq(correspondenceHistoryTable.performedById, employeesTable.id))
+    .leftJoin(actors, eq(correspondenceHistoryTable.actorId, actors.id))
     .where(eq(correspondenceHistoryTable.id, histEntry.id));
 
   res.status(201).json(result);

@@ -20,12 +20,14 @@ import type {
   Archive,
   ArchiveCorrespondenceBody,
   Correspondence,
+  CorrespondenceActionBody,
   CorrespondenceDetail,
   CorrespondenceHistory,
   CreateCorrespondenceBody,
   CreateDepartmentBody,
   CreateEmployeeBody,
   CreateHistoryBody,
+  CreateNotificationBody,
   DashboardSummary,
   DeleteResult,
   Department,
@@ -36,6 +38,8 @@ import type {
   ListArchiveParams,
   ListCorrespondencesParams,
   ListEmployeesParams,
+  ListNotificationsParams,
+  Notification,
   StatusCount,
   UpdateCorrespondenceBody,
 } from "./api.schemas";
@@ -288,12 +292,12 @@ export const useCreateDepartment = <
 /**
  * @summary Get a department by ID
  */
-export const getGetDepartmentUrl = (id: number) => {
+export const getGetDepartmentUrl = (id: string) => {
   return `/api/departments/${id}`;
 };
 
 export const getDepartment = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<Department> => {
   return customFetch<Department>(getGetDepartmentUrl(id), {
@@ -302,7 +306,7 @@ export const getDepartment = async (
   });
 };
 
-export const getGetDepartmentQueryKey = (id: number) => {
+export const getGetDepartmentQueryKey = (id: string) => {
   return [`/api/departments/${id}`] as const;
 };
 
@@ -310,7 +314,7 @@ export const getGetDepartmentQueryOptions = <
   TData = Awaited<ReturnType<typeof getDepartment>>,
   TError = ErrorType<unknown>,
 >(
-  id: number,
+  id: string,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getDepartment>>,
@@ -353,7 +357,7 @@ export function useGetDepartment<
   TData = Awaited<ReturnType<typeof getDepartment>>,
   TError = ErrorType<unknown>,
 >(
-  id: number,
+  id: string,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getDepartment>>,
@@ -375,12 +379,12 @@ export function useGetDepartment<
 /**
  * @summary Update a department
  */
-export const getUpdateDepartmentUrl = (id: number) => {
+export const getUpdateDepartmentUrl = (id: string) => {
   return `/api/departments/${id}`;
 };
 
 export const updateDepartment = async (
-  id: number,
+  id: string,
   createDepartmentBody: CreateDepartmentBody,
   options?: RequestInit,
 ): Promise<Department> => {
@@ -399,14 +403,14 @@ export const getUpdateDepartmentMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateDepartment>>,
     TError,
-    { id: number; data: BodyType<CreateDepartmentBody> },
+    { id: string; data: BodyType<CreateDepartmentBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateDepartment>>,
   TError,
-  { id: number; data: BodyType<CreateDepartmentBody> },
+  { id: string; data: BodyType<CreateDepartmentBody> },
   TContext
 > => {
   const mutationKey = ["updateDepartment"];
@@ -420,7 +424,7 @@ export const getUpdateDepartmentMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateDepartment>>,
-    { id: number; data: BodyType<CreateDepartmentBody> }
+    { id: string; data: BodyType<CreateDepartmentBody> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -446,14 +450,14 @@ export const useUpdateDepartment = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateDepartment>>,
     TError,
-    { id: number; data: BodyType<CreateDepartmentBody> },
+    { id: string; data: BodyType<CreateDepartmentBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof updateDepartment>>,
   TError,
-  { id: number; data: BodyType<CreateDepartmentBody> },
+  { id: string; data: BodyType<CreateDepartmentBody> },
   TContext
 > => {
   return useMutation(getUpdateDepartmentMutationOptions(options));
@@ -462,12 +466,12 @@ export const useUpdateDepartment = <
 /**
  * @summary Delete a department
  */
-export const getDeleteDepartmentUrl = (id: number) => {
+export const getDeleteDepartmentUrl = (id: string) => {
   return `/api/departments/${id}`;
 };
 
 export const deleteDepartment = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<DeleteResult> => {
   return customFetch<DeleteResult>(getDeleteDepartmentUrl(id), {
@@ -483,14 +487,14 @@ export const getDeleteDepartmentMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteDepartment>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteDepartment>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   const mutationKey = ["deleteDepartment"];
@@ -504,7 +508,7 @@ export const getDeleteDepartmentMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteDepartment>>,
-    { id: number }
+    { id: string }
   > = (props) => {
     const { id } = props ?? {};
 
@@ -530,14 +534,14 @@ export const useDeleteDepartment = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteDepartment>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof deleteDepartment>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   return useMutation(getDeleteDepartmentMutationOptions(options));
@@ -726,12 +730,12 @@ export const useCreateEmployee = <
 /**
  * @summary Get employee by ID
  */
-export const getGetEmployeeUrl = (id: number) => {
+export const getGetEmployeeUrl = (id: string) => {
   return `/api/employees/${id}`;
 };
 
 export const getEmployee = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<Employee> => {
   return customFetch<Employee>(getGetEmployeeUrl(id), {
@@ -740,7 +744,7 @@ export const getEmployee = async (
   });
 };
 
-export const getGetEmployeeQueryKey = (id: number) => {
+export const getGetEmployeeQueryKey = (id: string) => {
   return [`/api/employees/${id}`] as const;
 };
 
@@ -748,7 +752,7 @@ export const getGetEmployeeQueryOptions = <
   TData = Awaited<ReturnType<typeof getEmployee>>,
   TError = ErrorType<unknown>,
 >(
-  id: number,
+  id: string,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getEmployee>>,
@@ -791,7 +795,7 @@ export function useGetEmployee<
   TData = Awaited<ReturnType<typeof getEmployee>>,
   TError = ErrorType<unknown>,
 >(
-  id: number,
+  id: string,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getEmployee>>,
@@ -813,12 +817,12 @@ export function useGetEmployee<
 /**
  * @summary Update employee
  */
-export const getUpdateEmployeeUrl = (id: number) => {
+export const getUpdateEmployeeUrl = (id: string) => {
   return `/api/employees/${id}`;
 };
 
 export const updateEmployee = async (
-  id: number,
+  id: string,
   createEmployeeBody: CreateEmployeeBody,
   options?: RequestInit,
 ): Promise<Employee> => {
@@ -837,14 +841,14 @@ export const getUpdateEmployeeMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateEmployee>>,
     TError,
-    { id: number; data: BodyType<CreateEmployeeBody> },
+    { id: string; data: BodyType<CreateEmployeeBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateEmployee>>,
   TError,
-  { id: number; data: BodyType<CreateEmployeeBody> },
+  { id: string; data: BodyType<CreateEmployeeBody> },
   TContext
 > => {
   const mutationKey = ["updateEmployee"];
@@ -858,7 +862,7 @@ export const getUpdateEmployeeMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateEmployee>>,
-    { id: number; data: BodyType<CreateEmployeeBody> }
+    { id: string; data: BodyType<CreateEmployeeBody> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -884,14 +888,14 @@ export const useUpdateEmployee = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateEmployee>>,
     TError,
-    { id: number; data: BodyType<CreateEmployeeBody> },
+    { id: string; data: BodyType<CreateEmployeeBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof updateEmployee>>,
   TError,
-  { id: number; data: BodyType<CreateEmployeeBody> },
+  { id: string; data: BodyType<CreateEmployeeBody> },
   TContext
 > => {
   return useMutation(getUpdateEmployeeMutationOptions(options));
@@ -900,12 +904,12 @@ export const useUpdateEmployee = <
 /**
  * @summary Delete employee
  */
-export const getDeleteEmployeeUrl = (id: number) => {
+export const getDeleteEmployeeUrl = (id: string) => {
   return `/api/employees/${id}`;
 };
 
 export const deleteEmployee = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<DeleteResult> => {
   return customFetch<DeleteResult>(getDeleteEmployeeUrl(id), {
@@ -921,14 +925,14 @@ export const getDeleteEmployeeMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteEmployee>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteEmployee>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   const mutationKey = ["deleteEmployee"];
@@ -942,7 +946,7 @@ export const getDeleteEmployeeMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteEmployee>>,
-    { id: number }
+    { id: string }
   > = (props) => {
     const { id } = props ?? {};
 
@@ -968,14 +972,14 @@ export const useDeleteEmployee = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteEmployee>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof deleteEmployee>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   return useMutation(getDeleteEmployeeMutationOptions(options));
@@ -1171,12 +1175,12 @@ export const useCreateCorrespondence = <
 /**
  * @summary Get correspondence by ID
  */
-export const getGetCorrespondenceUrl = (id: number) => {
+export const getGetCorrespondenceUrl = (id: string) => {
   return `/api/correspondences/${id}`;
 };
 
 export const getCorrespondence = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<CorrespondenceDetail> => {
   return customFetch<CorrespondenceDetail>(getGetCorrespondenceUrl(id), {
@@ -1185,7 +1189,7 @@ export const getCorrespondence = async (
   });
 };
 
-export const getGetCorrespondenceQueryKey = (id: number) => {
+export const getGetCorrespondenceQueryKey = (id: string) => {
   return [`/api/correspondences/${id}`] as const;
 };
 
@@ -1193,7 +1197,7 @@ export const getGetCorrespondenceQueryOptions = <
   TData = Awaited<ReturnType<typeof getCorrespondence>>,
   TError = ErrorType<unknown>,
 >(
-  id: number,
+  id: string,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getCorrespondence>>,
@@ -1236,7 +1240,7 @@ export function useGetCorrespondence<
   TData = Awaited<ReturnType<typeof getCorrespondence>>,
   TError = ErrorType<unknown>,
 >(
-  id: number,
+  id: string,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getCorrespondence>>,
@@ -1258,12 +1262,12 @@ export function useGetCorrespondence<
 /**
  * @summary Update correspondence
  */
-export const getUpdateCorrespondenceUrl = (id: number) => {
+export const getUpdateCorrespondenceUrl = (id: string) => {
   return `/api/correspondences/${id}`;
 };
 
 export const updateCorrespondence = async (
-  id: number,
+  id: string,
   updateCorrespondenceBody: UpdateCorrespondenceBody,
   options?: RequestInit,
 ): Promise<Correspondence> => {
@@ -1282,14 +1286,14 @@ export const getUpdateCorrespondenceMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateCorrespondence>>,
     TError,
-    { id: number; data: BodyType<UpdateCorrespondenceBody> },
+    { id: string; data: BodyType<UpdateCorrespondenceBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateCorrespondence>>,
   TError,
-  { id: number; data: BodyType<UpdateCorrespondenceBody> },
+  { id: string; data: BodyType<UpdateCorrespondenceBody> },
   TContext
 > => {
   const mutationKey = ["updateCorrespondence"];
@@ -1303,7 +1307,7 @@ export const getUpdateCorrespondenceMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateCorrespondence>>,
-    { id: number; data: BodyType<UpdateCorrespondenceBody> }
+    { id: string; data: BodyType<UpdateCorrespondenceBody> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -1330,14 +1334,14 @@ export const useUpdateCorrespondence = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateCorrespondence>>,
     TError,
-    { id: number; data: BodyType<UpdateCorrespondenceBody> },
+    { id: string; data: BodyType<UpdateCorrespondenceBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof updateCorrespondence>>,
   TError,
-  { id: number; data: BodyType<UpdateCorrespondenceBody> },
+  { id: string; data: BodyType<UpdateCorrespondenceBody> },
   TContext
 > => {
   return useMutation(getUpdateCorrespondenceMutationOptions(options));
@@ -1346,12 +1350,12 @@ export const useUpdateCorrespondence = <
 /**
  * @summary Delete correspondence
  */
-export const getDeleteCorrespondenceUrl = (id: number) => {
+export const getDeleteCorrespondenceUrl = (id: string) => {
   return `/api/correspondences/${id}`;
 };
 
 export const deleteCorrespondence = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<DeleteResult> => {
   return customFetch<DeleteResult>(getDeleteCorrespondenceUrl(id), {
@@ -1367,14 +1371,14 @@ export const getDeleteCorrespondenceMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteCorrespondence>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteCorrespondence>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   const mutationKey = ["deleteCorrespondence"];
@@ -1388,7 +1392,7 @@ export const getDeleteCorrespondenceMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteCorrespondence>>,
-    { id: number }
+    { id: string }
   > = (props) => {
     const { id } = props ?? {};
 
@@ -1414,14 +1418,14 @@ export const useDeleteCorrespondence = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteCorrespondence>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof deleteCorrespondence>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   return useMutation(getDeleteCorrespondenceMutationOptions(options));
@@ -1430,12 +1434,12 @@ export const useDeleteCorrespondence = <
 /**
  * @summary Archive a correspondence
  */
-export const getArchiveCorrespondenceUrl = (id: number) => {
+export const getArchiveCorrespondenceUrl = (id: string) => {
   return `/api/correspondences/${id}/archive`;
 };
 
 export const archiveCorrespondence = async (
-  id: number,
+  id: string,
   archiveCorrespondenceBody: ArchiveCorrespondenceBody,
   options?: RequestInit,
 ): Promise<Archive> => {
@@ -1454,14 +1458,14 @@ export const getArchiveCorrespondenceMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof archiveCorrespondence>>,
     TError,
-    { id: number; data: BodyType<ArchiveCorrespondenceBody> },
+    { id: string; data: BodyType<ArchiveCorrespondenceBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof archiveCorrespondence>>,
   TError,
-  { id: number; data: BodyType<ArchiveCorrespondenceBody> },
+  { id: string; data: BodyType<ArchiveCorrespondenceBody> },
   TContext
 > => {
   const mutationKey = ["archiveCorrespondence"];
@@ -1475,7 +1479,7 @@ export const getArchiveCorrespondenceMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof archiveCorrespondence>>,
-    { id: number; data: BodyType<ArchiveCorrespondenceBody> }
+    { id: string; data: BodyType<ArchiveCorrespondenceBody> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -1502,14 +1506,14 @@ export const useArchiveCorrespondence = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof archiveCorrespondence>>,
     TError,
-    { id: number; data: BodyType<ArchiveCorrespondenceBody> },
+    { id: string; data: BodyType<ArchiveCorrespondenceBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof archiveCorrespondence>>,
   TError,
-  { id: number; data: BodyType<ArchiveCorrespondenceBody> },
+  { id: string; data: BodyType<ArchiveCorrespondenceBody> },
   TContext
 > => {
   return useMutation(getArchiveCorrespondenceMutationOptions(options));
@@ -1518,12 +1522,12 @@ export const useArchiveCorrespondence = <
 /**
  * @summary Add a history entry to a correspondence
  */
-export const getAddCorrespondenceHistoryUrl = (id: number) => {
+export const getAddCorrespondenceHistoryUrl = (id: string) => {
   return `/api/correspondences/${id}/history`;
 };
 
 export const addCorrespondenceHistory = async (
-  id: number,
+  id: string,
   createHistoryBody: CreateHistoryBody,
   options?: RequestInit,
 ): Promise<CorrespondenceHistory> => {
@@ -1545,14 +1549,14 @@ export const getAddCorrespondenceHistoryMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof addCorrespondenceHistory>>,
     TError,
-    { id: number; data: BodyType<CreateHistoryBody> },
+    { id: string; data: BodyType<CreateHistoryBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof addCorrespondenceHistory>>,
   TError,
-  { id: number; data: BodyType<CreateHistoryBody> },
+  { id: string; data: BodyType<CreateHistoryBody> },
   TContext
 > => {
   const mutationKey = ["addCorrespondenceHistory"];
@@ -1566,7 +1570,7 @@ export const getAddCorrespondenceHistoryMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof addCorrespondenceHistory>>,
-    { id: number; data: BodyType<CreateHistoryBody> }
+    { id: string; data: BodyType<CreateHistoryBody> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -1592,17 +1596,59 @@ export const useAddCorrespondenceHistory = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof addCorrespondenceHistory>>,
     TError,
-    { id: number; data: BodyType<CreateHistoryBody> },
+    { id: string; data: BodyType<CreateHistoryBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof addCorrespondenceHistory>>,
   TError,
-  { id: number; data: BodyType<CreateHistoryBody> },
+  { id: string; data: BodyType<CreateHistoryBody> },
   TContext
 > => {
   return useMutation(getAddCorrespondenceHistoryMutationOptions(options));
+};
+
+/**
+ * @summary Perform an action (approve/reject/archive) on a correspondence
+ */
+export const getActionCorrespondenceUrl = (id: string) => {
+  return `/api/correspondences/${id}/action`;
+};
+
+export const actionCorrespondence = async (
+  id: string,
+  data: BodyType<CorrespondenceActionBody>,
+  options?: RequestInit,
+): Promise<CorrespondenceDetail> => {
+  return customFetch<CorrespondenceDetail>(getActionCorrespondenceUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(data),
+  });
+};
+
+export const useActionCorrespondence = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof actionCorrespondence>>,
+    TError,
+    { id: string; data: BodyType<CorrespondenceActionBody> },
+    TContext
+  >;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof actionCorrespondence>>,
+  TError,
+  { id: string; data: BodyType<CorrespondenceActionBody> },
+  TContext
+> => {
+  return useMutation({
+    mutationFn: ({ id, data }) => actionCorrespondence(id, data),
+    ...options?.mutation,
+  });
 };
 
 /**
@@ -2029,3 +2075,125 @@ export function useGetCorrespondencesByStatus<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+// ─── Notifications ─────────────────────────────────────────────────────────
+
+export const getListNotificationsUrl = (params: ListNotificationsParams) => {
+  return `/api/notifications?userId=${params.userId}`;
+};
+
+export const listNotifications = async (
+  params: ListNotificationsParams,
+  options?: RequestInit,
+): Promise<Notification[]> => {
+  return customFetch<Notification[]>(getListNotificationsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListNotificationsQueryKey = (params: ListNotificationsParams) => {
+  return [`/api/notifications`, params] as const;
+};
+
+export const getListNotificationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listNotifications>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListNotificationsParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListNotificationsQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listNotifications>>> = ({ signal }) =>
+    listNotifications(params, { signal, ...requestOptions });
+  return { queryKey, queryFn, enabled: !!params.userId, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listNotifications>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export function useListNotifications<
+  TData = Awaited<ReturnType<typeof listNotifications>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListNotificationsParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListNotificationsQueryOptions(params, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const createNotification = async (
+  body: CreateNotificationBody,
+  options?: RequestInit,
+): Promise<Notification> => {
+  return customFetch<Notification>("/api/notifications", {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+};
+
+export const useCreateNotification = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createNotification>>,
+    TError,
+    { data: BodyType<CreateNotificationBody> },
+    TContext
+  >;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createNotification>>,
+  TError,
+  { data: BodyType<CreateNotificationBody> },
+  TContext
+> => {
+  return useMutation({
+    mutationFn: ({ data }) => createNotification(data),
+    ...options?.mutation,
+  });
+};
+
+export const markNotificationRead = async (
+  id: string,
+  options?: RequestInit,
+): Promise<Notification> => {
+  return customFetch<Notification>(`/api/notifications/${id}/read`, {
+    ...options,
+    method: "PATCH",
+  });
+};
+
+export const useMarkNotificationRead = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markNotificationRead>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof markNotificationRead>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation({
+    mutationFn: ({ id }) => markNotificationRead(id),
+    ...options?.mutation,
+  });
+};

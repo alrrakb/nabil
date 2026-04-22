@@ -5,6 +5,7 @@ import employeesRouter from "./employees";
 import correspondencesRouter from "./correspondences";
 import archiveRouter from "./archive";
 import dashboardRouter from "./dashboard";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(employeesRouter);
 router.use(correspondencesRouter);
 router.use(archiveRouter);
 router.use(dashboardRouter);
+router.use(notificationsRouter);
 
 export default router;

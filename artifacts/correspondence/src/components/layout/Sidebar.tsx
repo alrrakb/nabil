@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, FileText, Inbox, Archive, BarChart3, Building2, Users, LogOut } from "lucide-react";
+import { LayoutDashboard, FileText, Inbox, Archive, BarChart3, Building2, Users, LogOut, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,12 @@ const roleLabels: Record<string, string> = {
   employee: "موظف",
 };
 
-export function Sidebar() {
+interface SidebarProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ open, onClose }: SidebarProps) {
   const [location] = useLocation();
   const { user, signOut } = useAuth();
 
@@ -29,10 +34,24 @@ export function Sidebar() {
   );
 
   return (
-    <div className="flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground border-l border-sidebar-border">
+    <aside
+      className={cn(
+        "fixed inset-y-0 right-0 z-50 flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground border-l border-sidebar-border transition-transform duration-300",
+        "lg:relative lg:inset-auto lg:z-auto lg:translate-x-0",
+        open ? "translate-x-0" : "translate-x-full lg:translate-x-0"
+      )}
+    >
       {/* Brand */}
-      <div className="flex h-16 items-center px-6 py-4 border-b border-sidebar-border">
+      <div className="flex h-16 items-center justify-between px-6 py-4 border-b border-sidebar-border">
         <h1 className="text-xl font-bold tracking-tight text-sidebar-primary">معهد دلتا العالي</h1>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="lg:hidden text-sidebar-foreground hover:bg-sidebar-accent/50"
+          onClick={onClose}
+        >
+          <X className="h-5 w-5" />
+        </Button>
       </div>
 
       {/* Nav */}
@@ -41,7 +60,7 @@ export function Sidebar() {
           {navigation.map((item) => {
             const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             return (
-              <Link key={item.name} href={item.href}>
+              <Link key={item.name} href={item.href} onClick={onClose}>
                 <div
                   data-testid={`nav-${item.href.replace("/", "") || "home"}`}
                   className={cn(
@@ -84,6 +103,6 @@ export function Sidebar() {
           </Button>
         </div>
       )}
-    </div>
+    </aside>
   );
 }

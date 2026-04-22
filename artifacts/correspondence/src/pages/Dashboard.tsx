@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { Link } from "wouter";
+import { buildDeptChartData } from "@/lib/deptChart";
 
 const COLORS = ['#1a2744', '#008080', '#eab308', '#ef4444', '#8b5cf6'];
 
@@ -21,7 +22,7 @@ export default function Dashboard() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">الرئيسية</h1>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -42,23 +43,25 @@ export default function Dashboard() {
     { title: "إجمالي المراسلات", value: summary?.totalCorrespondences || 0, icon: FileText, color: "text-blue-600" },
     { title: "قيد الانتظار", value: summary?.pendingCount || 0, icon: Clock, color: "text-yellow-600" },
     { title: "جاري التنفيذ", value: summary?.inProgressCount || 0, icon: Inbox, color: "text-orange-600" },
-    { title: "مكتملة", value: summary?.completedCount || 0, icon: CheckCircle2, color: "text-green-600" },
+    { title: "مكتملة", value: summary?.approvedCount || 0, icon: CheckCircle2, color: "text-green-600" },
     { title: "مؤرشفة", value: summary?.archivedCount || 0, icon: Archive, color: "text-gray-600" },
     { title: "مراسلات عاجلة", value: summary?.urgentCount || 0, icon: AlertCircle, color: "text-red-600" },
     { title: "إجمالي الأقسام", value: summary?.totalDepartments || 0, icon: Building2, color: "text-indigo-600" },
     { title: "إجمالي الموظفين", value: summary?.totalEmployees || 0, icon: Users, color: "text-teal-600" },
   ];
 
-  const pieData = byStatus?.map(s => ({
+  const pieData = Array.isArray(byStatus) ? byStatus.map(s => ({
     name: statusTranslations[s.status] || s.status,
     value: s.count
-  })) || [];
+  })) : [];
+
+  const { chartData: deptChartData, legendData: deptLegendData } = buildDeptChartData(Array.isArray(byDept) ? byDept : []);
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">الرئيسية</h1>
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
           <Card key={i}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -72,21 +75,38 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
         <Card>
           <CardHeader>
             <CardTitle>المراسلات حسب القسم</CardTitle>
           </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={byDept || []} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+          <CardContent>
+            <div className="min-h-[300px] w-full">
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={deptChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="departmentName" tickLine={false} axisLine={false} />
+                <XAxis dataKey="name" hide />
                 <YAxis tickLine={false} axisLine={false} />
-                <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <Tooltip
+                  cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                />
+                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                  {deptChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
+            </div>
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-2">
+              {deptLegendData.map((entry) => (
+                <div key={entry.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+                  {entry.name}
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
@@ -94,8 +114,9 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle>حالة المراسلات</CardTitle>
           </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <CardContent>
+            <div className="min-h-[300px] w-full">
+            <ResponsiveContainer width="100%" height={240}>
               <PieChart>
                 <Pie
                   data={pieData}
@@ -113,6 +134,15 @@ export default function Dashboard() {
                 <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
               </PieChart>
             </ResponsiveContainer>
+            </div>
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-2">
+              {pieData.map((entry, index) => (
+                <div key={entry.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                  {entry.name}
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -135,12 +165,12 @@ export default function Dashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recent?.length === 0 && (
+              {Array.isArray(recent) && recent.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">لا توجد مراسلات حديثة</TableCell>
                 </TableRow>
               )}
-              {recent?.map((item) => (
+              {Array.isArray(recent) && recent.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">
                     <Link href={`/correspondences/${item.id}`} className="text-primary hover:underline">
@@ -149,7 +179,7 @@ export default function Dashboard() {
                   </TableCell>
                   <TableCell>{item.subject}</TableCell>
                   <TableCell>{typeTranslations[item.type]}</TableCell>
-                  <TableCell>{item.fromDepartmentName || '-'}</TableCell>
+                  <TableCell>{item.departmentName || item.senderName || '-'}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusColor(item.status)}>{statusTranslations[item.status]}</Badge>
                   </TableCell>

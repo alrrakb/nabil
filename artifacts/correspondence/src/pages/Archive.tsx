@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useListArchive } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,62 +8,38 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Archive as ArchiveIcon, Search, SlidersHorizontal, FileDown, FileSpreadsheet, Loader2 } from "lucide-react";
-import { exportTableToPDF, exportTableToExcel } from "@/lib/exportUtils";
+import { Archive as ArchiveIcon, Search, SlidersHorizontal, FileSpreadsheet } from "lucide-react";
+import { exportTableToExcel } from "@/lib/exportUtils";
 
 export default function Archive() {
+  const { user } = useAuth();
   const tableRef = useRef<HTMLDivElement>(null);
-  const { data: archives, isLoading } = useListArchive();
 
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [exportingPDF, setExportingPDF] = useState(false);
 
-  const filteredArchives = archives?.filter((item) => {
-    const matchesSearch =
-      !search ||
-      (item.archiveNumber?.toLowerCase().includes(search.toLowerCase())) ||
-      (item.correspondence?.referenceNumber?.toLowerCase().includes(search.toLowerCase())) ||
-      (item.correspondence?.subject?.toLowerCase().includes(search.toLowerCase()));
-
-    const archivedAt = new Date(item.archivedAt);
-    const matchesFrom = !dateFrom || archivedAt >= new Date(dateFrom);
-    const matchesTo = !dateTo || archivedAt <= new Date(dateTo + "T23:59:59");
-
-    return matchesSearch && matchesFrom && matchesTo;
+  const { data: filteredArchives, isLoading } = useListArchive({
+    search: search || undefined,
+    fromDate: dateFrom || undefined,
+    toDate: dateTo || undefined,
+    viewerRole: user?.role,
   });
-
-  const handleExportPDF = async () => {
-    if (!tableRef.current) return;
-    setExportingPDF(true);
-    try {
-      await exportTableToPDF(
-        tableRef.current,
-        "archive-report",
-        "تقرير الأرشيف — معهد دلتا العالي"
-      );
-    } finally {
-      setExportingPDF(false);
-    }
-  };
 
   const handleExportExcel = () => {
     if (!filteredArchives) return;
     exportTableToExcel(
       filteredArchives.map((item) => ({
-        archiveNumber: item.archiveNumber,
         referenceNumber: item.correspondence?.referenceNumber ?? "-",
         subject: item.correspondence?.subject ?? "-",
-        location: item.archiveLocation ?? "-",
-        archivedAt: format(new Date(item.archivedAt), "yyyy/MM/dd"),
+        archiveReason: item.archiveReason ?? "-",
+        archivedAt: item.createdAt ? format(new Date(item.createdAt), "yyyy/MM/dd") : "-",
         archivedBy: item.archivedByName ?? "-",
       })),
       [
-        { key: "archiveNumber", header: "رقم الأرشيف" },
         { key: "referenceNumber", header: "الرقم المرجعي" },
         { key: "subject", header: "الموضوع" },
-        { key: "location", header: "مكان الحفظ" },
+        { key: "archiveReason", header: "سبب الأرشفة" },
         { key: "archivedAt", header: "تاريخ الأرشفة" },
         { key: "archivedBy", header: "بواسطة" },
       ],
@@ -87,20 +64,6 @@ export default function Archive() {
           <Button
             variant="outline"
             size="sm"
-            onClick={handleExportPDF}
-            disabled={exportingPDF || isLoading || !filteredArchives?.length}
-            className="gap-2"
-          >
-            {exportingPDF ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileDown className="h-4 w-4" />
-            )}
-            تصدير PDF
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
             onClick={handleExportExcel}
             disabled={isLoading || !filteredArchives?.length}
             className="gap-2 text-green-700 border-green-200 hover:bg-green-50"
@@ -111,26 +74,25 @@ export default function Archive() {
         </div>
       </div>
 
-      {/* Advanced search — Bug 6 fix: proper flex-wrap layout */}
+      {/* Advanced search */}
       <Card>
         <CardContent className="pt-4 pb-4">
           <div className="flex items-center gap-2 mb-3">
             <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">بحث متقدم</span>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Text search */}
+          <div className="flex flex-wrap items-end gap-3">
             <div className="relative min-w-[220px] flex-1">
-              <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground block mb-1">بحث</span>
+              <Search className="absolute right-2.5 top-[calc(50%+4px)] -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="ابحث بالعنوان أو الرقم المرجعي أو المرسل"
+                placeholder="ابحث بالموضوع أو الرقم المرجعي أو سبب الأرشفة"
                 className="pr-9 text-sm"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
 
-            {/* Date from */}
             <div className="flex flex-col gap-1 min-w-[140px]">
               <span className="text-xs text-muted-foreground">من تاريخ</span>
               <Input
@@ -141,7 +103,6 @@ export default function Archive() {
               />
             </div>
 
-            {/* Date to */}
             <div className="flex flex-col gap-1 min-w-[140px]">
               <span className="text-xs text-muted-foreground">إلى تاريخ</span>
               <Input
@@ -152,13 +113,12 @@ export default function Archive() {
               />
             </div>
 
-            {/* Reset */}
             {(search || dateFrom || dateTo) && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => { setSearch(""); setDateFrom(""); setDateTo(""); }}
-                className="text-muted-foreground mt-4"
+                className="text-muted-foreground"
               >
                 مسح الفلاتر
               </Button>
@@ -174,10 +134,9 @@ export default function Archive() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>رقم الأرشيف</TableHead>
                   <TableHead>الرقم المرجعي للمراسلة</TableHead>
                   <TableHead>الموضوع</TableHead>
-                  <TableHead>مكان الحفظ</TableHead>
+                  <TableHead>سبب الأرشفة</TableHead>
                   <TableHead>تاريخ الأرشفة</TableHead>
                   <TableHead>بواسطة</TableHead>
                 </TableRow>
@@ -186,29 +145,28 @@ export default function Archive() {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 6 }).map((_, j) => (
+                      {Array.from({ length: 5 }).map((_, j) => (
                         <TableCell key={j}><Skeleton className="h-6 w-full" /></TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : filteredArchives?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       لا توجد مراسلات مؤرشفة تطابق بحثك
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredArchives?.map((item) => (
                     <TableRow key={item.id} className="hover:bg-muted/40 transition-colors">
-                      <TableCell className="font-medium">{item.archiveNumber}</TableCell>
                       <TableCell>
-                        <Link href={`/correspondences/${item.correspondenceId}`} className="text-primary hover:underline">
-                          {item.correspondence?.referenceNumber}
+                        <Link href={`/correspondences/${item.correspondenceId}`} className="text-primary hover:underline font-medium">
+                          {item.correspondence?.referenceNumber ?? item.correspondenceId.slice(0, 8)}
                         </Link>
                       </TableCell>
                       <TableCell>{item.correspondence?.subject}</TableCell>
-                      <TableCell>{item.archiveLocation || "-"}</TableCell>
-                      <TableCell>{format(new Date(item.archivedAt), "yyyy/MM/dd")}</TableCell>
+                      <TableCell>{item.archiveReason || "-"}</TableCell>
+                      <TableCell>{item.createdAt ? format(new Date(item.createdAt), "yyyy/MM/dd") : "-"}</TableCell>
                       <TableCell>{item.archivedByName || "-"}</TableCell>
                     </TableRow>
                   ))

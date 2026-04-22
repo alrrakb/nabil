@@ -6,12 +6,14 @@ import {
 } from "recharts";
 import { statusTranslations } from "@/lib/translations";
 import { Skeleton } from "@/components/ui/skeleton";
+import { buildDeptChartData } from "@/lib/deptChart";
 
 const COLORS = ["#1a2744", "#008080", "#eab308", "#ef4444", "#8b5cf6"];
 
 export default function Reports() {
-  const { data: byDept, isLoading: isLoadingDept } = useGetCorrespondencesByDepartment();
+  const { data: byDeptRaw, isLoading: isLoadingDept } = useGetCorrespondencesByDepartment();
   const { data: byStatus, isLoading: isLoadingStatus } = useGetCorrespondencesByStatus();
+  const { chartData: deptChartData, legendData: deptLegendData } = buildDeptChartData(Array.isArray(byDeptRaw) ? byDeptRaw : []);
 
   if (isLoadingDept || isLoadingStatus) {
     return (
@@ -35,46 +37,42 @@ export default function Reports() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">التقارير والإحصائيات</h1>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Bar chart — by department */}
-        <Card>
+        <Card className="min-h-[350px] w-full">
           <CardHeader>
             <CardTitle>توزيع المراسلات حسب القسم</CardTitle>
           </CardHeader>
-          <CardContent className="h-[400px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={byDept || []}
-                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-              >
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={deptChartData} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="departmentName"
-                  tickLine={false}
-                  axisLine={false}
-                  angle={-35}
-                  textAnchor="end"
-                  height={80}
-                  tick={{ fontSize: 12 }}
-                />
+                <XAxis dataKey="name" hide />
                 <YAxis tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip
-                  cursor={{ fill: "transparent" }}
+                  cursor={{ fill: "rgba(0,0,0,0.04)" }}
                   contentStyle={{ borderRadius: "8px", fontFamily: "Cairo, sans-serif" }}
                 />
-                <Bar
-                  dataKey="count"
-                  name="عدد المراسلات"
-                  fill="hsl(var(--primary))"
-                  radius={[4, 4, 0, 0]}
-                />
+                <Bar dataKey="count" name="عدد المراسلات" radius={[4, 4, 0, 0]}>
+                  {deptChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-2">
+              {deptLegendData.map((entry) => (
+                <div key={entry.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+                  {entry.name}
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
         {/* Pie chart — by status, no inline labels (they caused overlap) */}
-        <Card>
+        <Card className="min-h-[350px] w-full">
           <CardHeader>
             <CardTitle>توزيع المراسلات حسب الحالة</CardTitle>
           </CardHeader>

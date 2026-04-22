@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useListCorrespondences } from "@workspace/api-client-react";
 import { CorrespondenceStatus, CorrespondenceType } from "@workspace/api-client-react";
 import { statusTranslations, getStatusColor, priorityTranslations, getPriorityColor, typeTranslations } from "@/lib/translations";
@@ -11,38 +12,25 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Filter, FileDown, FileSpreadsheet, Loader2 } from "lucide-react";
-import { exportTableToPDF, exportTableToExcel } from "@/lib/exportUtils";
+import { Search, Filter, FileSpreadsheet } from "lucide-react";
+import { exportTableToExcel } from "@/lib/exportUtils";
 
 export default function Inbox() {
+  const { user } = useAuth();
   const tableRef = useRef<HTMLDivElement>(null);
   const [statusFilter, setStatusFilter] = useState<CorrespondenceStatus | "all">("all");
   const [typeFilter, setTypeFilter] = useState<CorrespondenceType | "all">("all");
   const [search, setSearch] = useState("");
-  const [exportingPDF, setExportingPDF] = useState(false);
-
   const { data: correspondences, isLoading } = useListCorrespondences({
     status: statusFilter !== "all" ? (statusFilter as CorrespondenceStatus) : undefined,
     type: typeFilter !== "all" ? (typeFilter as CorrespondenceType) : undefined,
+    viewerId: user?.employeeId,
+    viewerRole: user?.role,
   });
 
   const filteredCorrespondences = correspondences?.filter(
     (c) => c.subject.includes(search) || c.referenceNumber.includes(search)
   );
-
-  const handleExportPDF = async () => {
-    if (!tableRef.current) return;
-    setExportingPDF(true);
-    try {
-      await exportTableToPDF(
-        tableRef.current,
-        "inbox-report",
-        "تقرير صندوق الوارد — معهد دلتا العالي"
-      );
-    } finally {
-      setExportingPDF(false);
-    }
-  };
 
   const handleExportExcel = () => {
     if (!filteredCorrespondences) return;
@@ -51,8 +39,8 @@ export default function Inbox() {
         referenceNumber: c.referenceNumber,
         subject: c.subject,
         type: typeTranslations[c.type] ?? c.type,
-        fromDepartment: c.fromDepartmentName ?? "-",
-        toDepartment: c.toDepartmentName ?? "-",
+        fromDepartment: c.senderName ? (c.senderCode ? `${c.senderName} (${c.senderCode})` : c.senderName) : (c.departmentName ?? "-"),
+        toDepartment: c.receiverName ? (c.receiverCode ? `${c.receiverName} (${c.receiverCode})` : c.receiverName) : "-",
         status: statusTranslations[c.status] ?? c.status,
         priority: priorityTranslations[c.priority] ?? c.priority,
         date: format(new Date(c.createdAt), "yyyy/MM/dd"),
@@ -82,20 +70,6 @@ export default function Inbox() {
           <Button
             variant="outline"
             size="sm"
-            onClick={handleExportPDF}
-            disabled={exportingPDF || isLoading || !filteredCorrespondences?.length}
-            className="gap-2"
-          >
-            {exportingPDF ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileDown className="h-4 w-4" />
-            )}
-            تصدير PDF
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
             onClick={handleExportExcel}
             disabled={isLoading || !filteredCorrespondences?.length}
             className="gap-2 text-green-700 border-green-200 hover:bg-green-50"
@@ -107,20 +81,20 @@ export default function Inbox() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2 items-center">
+      <div className="flex flex-col md:flex-row gap-4 mb-4">
         <div className="relative">
           <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder="بحث بالرقم أو الموضوع..."
-            className="pl-4 pr-9 w-[250px]"
+            className="pl-4 pr-9 w-full md:w-[250px]"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as CorrespondenceStatus | "all")}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-full md:w-[150px]">
             <Filter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="حالة المراسلة" />
           </SelectTrigger>
@@ -186,8 +160,8 @@ export default function Inbox() {
                       </TableCell>
                       <TableCell>{item.subject}</TableCell>
                       <TableCell>{typeTranslations[item.type]}</TableCell>
-                      <TableCell>{item.fromDepartmentName || "-"}</TableCell>
-                      <TableCell>{item.toDepartmentName || "-"}</TableCell>
+                      <TableCell>{item.senderName ? (item.senderCode ? `${item.senderName} (${item.senderCode})` : item.senderName) : (item.departmentName || "-")}</TableCell>
+                      <TableCell>{item.receiverName ? (item.receiverCode ? `${item.receiverName} (${item.receiverCode})` : item.receiverName) : "-"}</TableCell>
                       <TableCell>
                         <Badge variant={getStatusColor(item.status) as "default" | "secondary" | "destructive" | "outline"}>{statusTranslations[item.status]}</Badge>
                       </TableCell>

@@ -15,7 +15,7 @@ router.get("/departments", async (_req, res): Promise<void> => {
   const departments = await db
     .select()
     .from(departmentsTable)
-    .orderBy(departmentsTable.createdAt);
+    .orderBy(departmentsTable.name);
   res.json(departments);
 });
 
