@@ -45,8 +45,28 @@ Thumbs.db
 .github/instructions/nx.instructions.md
 
 # Replit
+.replit
+.replitignore
+replit.md
 .cache/
 .local/
+.replit-artifact/
+
+# Replit AI-generated session/context docs
+CLIENT_DELIVERY_REPORT.md
+CONTEXT.md
+RUNBOOK.md
+SESSION_SUMMARY.md
+STATE.md
+SUMMARY.md
+
+# Claude Code local settings
+.claude/
+
+# Environment variables (contain secrets)
+.env
+.env.*
+!.env.example
 
 # Attached assets (may contain sensitive data)
 attached_assets/

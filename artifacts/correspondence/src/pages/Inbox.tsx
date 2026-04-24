@@ -49,8 +49,8 @@ export default function Inbox() {
         { key: "referenceNumber", header: "الرقم المرجعي" },
         { key: "subject", header: "الموضوع" },
         { key: "type", header: "النوع" },
-        { key: "fromDepartment", header: "من قسم" },
-        { key: "toDepartment", header: "إلى قسم" },
+        { key: "fromDepartment", header: "المرسل" },
+        { key: "toDepartment", header: "المستلم" },
         { key: "status", header: "الحالة" },
         { key: "priority", header: "الأولوية" },
         { key: "date", header: "التاريخ" },
@@ -130,8 +130,8 @@ export default function Inbox() {
                   <TableHead>الرقم المرجعي</TableHead>
                   <TableHead>الموضوع</TableHead>
                   <TableHead>النوع</TableHead>
-                  <TableHead>من قسم</TableHead>
-                  <TableHead>إلى قسم</TableHead>
+                  <TableHead>المرسل</TableHead>
+                  <TableHead>المستلم</TableHead>
                   <TableHead>الحالة</TableHead>
                   <TableHead>الأولوية</TableHead>
                   <TableHead>التاريخ</TableHead>
