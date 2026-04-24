@@ -23,7 +23,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Plus, Trash2, Pencil, RefreshCw, Eye, EyeOff, Bell } from "lucide-react";
+import { Users, Plus, Trash2, Pencil, RefreshCw, Eye, EyeOff, Bell, KeyRound } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { roleTranslations } from "@/lib/translations";
@@ -69,9 +69,10 @@ function generateUniqueCode(existingCodes: Set<string>): string {
 }
 
 export default function Employees() {
-  const { hasRole } = useAuth();
+  const { hasRole, user, session } = useAuth();
   const isAdmin = hasRole("admin");
   const isSupervisorOrAdmin = hasRole("admin", "supervisor");
+  const isSuperAdmin = user?.email === "master@delta.edu.eg";
   const { data: employees, isLoading } = useListEmployees();
   const { data: departments } = useListDepartments();
   const createEmployee = useCreateEmployee();
@@ -85,6 +86,8 @@ export default function Employees() {
   const [editTarget, setEditTarget] = useState<Employee | null>(null);
   const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [notifTarget, setNotifTarget] = useState<Employee | null>(null);
+  const [resetTarget, setResetTarget] = useState<Employee | null>(null);
+  const [resetting, setResetting] = useState(false);
 
   const createForm = useForm<CreateValues>({
     resolver: zodResolver(createSchema),
@@ -176,6 +179,29 @@ export default function Employees() {
           },
         }
       );
+    }
+  }
+
+  async function handleResetPassword() {
+    if (!resetTarget) return;
+    setResetting(true);
+    try {
+      const res = await fetch(`/api/employees/${resetTarget.id}/reset-password`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "فشل إعادة التعيين");
+      toast({
+        title: `تم إعادة تعيين كلمة مرور ${resetTarget.fullName}`,
+        description: `كلمة المرور الجديدة: ${data.password}`,
+        duration: 15000,
+      });
+    } catch (err: unknown) {
+      toast({ title: (err as Error).message, variant: "destructive" });
+    } finally {
+      setResetting(false);
+      setResetTarget(null);
     }
   }
 
@@ -464,6 +490,25 @@ export default function Employees() {
         </DialogContent>
       </Dialog>
 
+      {/* Reset Password Confirmation Dialog */}
+      <Dialog open={!!resetTarget} onOpenChange={(open) => { if (!open) setResetTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>إعادة تعيين كلمة المرور</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            هل أنت متأكد من إعادة تعيين كلمة مرور <strong>{resetTarget?.fullName}</strong>؟
+            سيتم توليد كلمة مرور جديدة عشوائية وعرضها لك مرة واحدة.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setResetTarget(null)}>إلغاء</Button>
+            <Button variant="destructive" disabled={resetting} onClick={handleResetPassword}>
+              {resetting ? "جارٍ التعيين..." : "تأكيد إعادة التعيين"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Send Notification Modal */}
       <Dialog open={!!notifTarget} onOpenChange={(open) => { if (!open) { setNotifTarget(null); notifForm.reset(); } }}>
         <DialogContent>
@@ -560,6 +605,11 @@ export default function Employees() {
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </>
+                        )}
+                        {isSuperAdmin && (
+                          <Button variant="ghost" size="icon" title="إعادة تعيين كلمة المرور" onClick={() => setResetTarget(emp)}>
+                            <KeyRound className="h-4 w-4 text-amber-500" />
+                          </Button>
                         )}
                       </div>
                     </TableCell>
