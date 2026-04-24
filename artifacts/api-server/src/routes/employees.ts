@@ -1,5 +1,7 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, ne, and } from "drizzle-orm";
+
+const SUPER_ADMIN_EMAIL = "master@delta.edu.eg";
 import { createClient } from "@supabase/supabase-js";
 import { db, employeesTable, departmentsTable } from "@workspace/db";
 import {
@@ -45,7 +47,11 @@ router.get("/employees", async (req, res): Promise<void> => {
     .select(employeeSelect())
     .from(employeesTable)
     .leftJoin(departmentsTable, eq(employeesTable.departmentId, departmentsTable.id))
-    .where(query.data.departmentId ? eq(employeesTable.departmentId, query.data.departmentId) : undefined)
+    .where(
+      query.data.departmentId
+        ? and(ne(employeesTable.email, SUPER_ADMIN_EMAIL), eq(employeesTable.departmentId, query.data.departmentId))
+        : ne(employeesTable.email, SUPER_ADMIN_EMAIL)
+    )
     .orderBy(employeesTable.fullName);
 
   res.json(rows);
@@ -144,6 +150,47 @@ router.put("/employees/:id", async (req, res): Promise<void> => {
     return;
   }
   res.json(emp);
+});
+
+router.post("/employees/:id/reset-password", async (req, res): Promise<void> => {
+  const token = req.headers.authorization?.replace("Bearer ", "");
+  if (!token) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const { data: { user: caller }, error: authErr } = await supabaseAdmin.auth.getUser(token);
+  if (authErr || !caller || caller.email !== SUPER_ADMIN_EMAIL) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  const params = GetEmployeeParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [emp] = await db
+    .select({ authUserId: employeesTable.authUserId })
+    .from(employeesTable)
+    .where(eq(employeesTable.id, params.data.id));
+
+  if (!emp?.authUserId) {
+    res.status(404).json({ error: "Employee not found or has no auth account" });
+    return;
+  }
+
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#";
+  const newPassword = "D_" + Array.from({ length: 10 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+
+  const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(emp.authUserId, { password: newPassword });
+  if (updateErr) {
+    res.status(500).json({ error: updateErr.message });
+    return;
+  }
+
+  res.json({ password: newPassword });
 });
 
 router.delete("/employees/:id", async (req, res): Promise<void> => {
