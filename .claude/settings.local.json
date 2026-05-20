@@ -38,7 +38,10 @@
       "Bash(curl -s -X PUT \"https://znlhhnrkricpywowqwtu.supabase.co/auth/v1/admin/users/90dfc30e-4a9e-4040-9247-b253aeff574b\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpubGhobnJrcmljcHl3b3dxd3R1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjQ0MDkwMywiZXhwIjoyMDkyMDE2OTAzfQ.Sw8-6dNnEnms3FxJHLNqjXGSvQysRsj4rdO3yxK8zIk\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpubGhobnJrcmljcHl3b3dxd3R1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjQ0MDkwMywiZXhwIjoyMDkyMDE2OTAzfQ.Sw8-6dNnEnms3FxJHLNqjXGSvQysRsj4rdO3yxK8zIk\" -H \"Content-Type: application/json\" -d \"{\\\\\"password\\\\\":\\\\\"Delta@Super1\\\\\",\\\\\"user_metadata\\\\\":{\\\\\"force_password_reset\\\\\":true}}\")",
       "mcp__8fa93c08-c2fb-4519-b756-d6aeacf9916f__get_logs",
       "Bash(xargs grep *)",
-      "Bash(grep -E \"\\\\.\\(config|env|yml|yaml\\)$|nginx|pm2|docker\")"
+      "Bash(grep -E \"\\\\.\\(config|env|yml|yaml\\)$|nginx|pm2|docker\")",
+      "Bash(npm --version)",
+      "Bash(npm list *)",
+      "Bash(node -e \"import\\('node:fetch'\\).then\\(\\(\\) => console.log\\('native fetch ok'\\)\\).catch\\(\\(\\) => console.log\\('no native fetch'\\)\\); console.log\\(typeof fetch\\)\")"
     ]
   }
 }
