@@ -70,3 +70,8 @@ SUMMARY.md
 
 # Attached assets (may contain sensitive data)
 attached_assets/
+
+# Temporary test / debug scripts
+test-db-conn.mjs
+
+.vercel
